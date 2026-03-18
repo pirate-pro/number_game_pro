@@ -1,0 +1,8 @@
+{
+  "name": "nm_bridge",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}
