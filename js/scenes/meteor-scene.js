@@ -85,6 +85,38 @@ class Meteor {
 }
 
 class MeteorScene extends BaseScene {
+  getLayout(renderer) {
+    const view = renderer || this.app.renderer;
+    const H = view.height;
+    const compact = H <= 700;
+    const playTop = view.topInset + 102;
+    const inputH = compact ? 30 : 34;
+    const btnH = compact ? 24 : 28;
+    const gridGap = compact ? 6 : 8;
+    const submitW = compact ? 92 : 98;
+    const inputTop = 14;
+    const inputGap = compact ? 8 : 10;
+    const panelH = inputTop + inputH + inputGap + btnH * 4 + gridGap * 3 + 14;
+    const panelY = H - view.bottomInset - panelH;
+    const baseY = panelY - 88;
+    const playfieldH = Math.max(180, baseY - playTop - 10);
+
+    return {
+      playTop,
+      playfieldH,
+      baseY,
+      keypad: {
+        compact,
+        panelY,
+        panelH,
+        inputH,
+        btnH,
+        gridGap,
+        submitW,
+      },
+    };
+  }
+
   onEnter(params) {
     super.onEnter(params);
     this.gradeId = params.grade || this.app.profile.selectedGrade || "grade1";
@@ -146,7 +178,7 @@ class MeteorScene extends BaseScene {
     this.resetRound();
     this.phase = "playing";
     this.roundStartAt = Date.now();
-    this.baseY = this.app.renderer.height - this.app.renderer.bottomInset - 154;
+    this.baseY = this.getLayout(this.app.renderer).baseY;
   }
 
   difficultyState() {
@@ -322,10 +354,11 @@ class MeteorScene extends BaseScene {
   }
 
   getLauncherPoint() {
+    const layout = this.getLayout(this.app.renderer);
     const W = this.app.renderer.width;
     return {
       x: W / 2,
-      y: this.app.renderer.height - this.app.renderer.bottomInset - 116,
+      y: layout.baseY + 44,
     };
   }
 
@@ -593,8 +626,9 @@ class MeteorScene extends BaseScene {
 
   drawPlayfield(renderer, W, H) {
     const ctx = renderer.ctx;
-    const top = renderer.topInset + 102;
-    const fieldH = H - top - renderer.bottomInset - 184;
+    const layout = this.getLayout(renderer);
+    const top = layout.playTop;
+    const fieldH = layout.playfieldH;
 
     renderer.panel(16, top, W - 32, fieldH, {
       fill: "rgba(255,255,255,0.08)",
@@ -667,7 +701,8 @@ class MeteorScene extends BaseScene {
 
   drawBase(renderer, W, H) {
     const ctx = renderer.ctx;
-    const baseY = H - renderer.bottomInset - 154;
+    const layout = this.getLayout(renderer);
+    const baseY = layout.baseY;
     const launcher = this.getLauncherPoint();
 
     ctx.fillStyle = "rgba(15, 23, 42, 0.42)";
@@ -719,23 +754,28 @@ class MeteorScene extends BaseScene {
   }
 
   drawKeypad(renderer, W, H) {
-    const panelY = H - renderer.bottomInset - 134;
-    const panelH = 118;
+    if (this.phase !== "playing") {
+      return;
+    }
+
+    const layout = this.getLayout(renderer);
+    const panelY = layout.keypad.panelY;
+    const panelH = layout.keypad.panelH;
     renderer.panel(16, panelY, W - 32, panelH, {
       fill: "rgba(255,255,255,0.95)",
       radius: 22,
       shadow: "rgba(15,23,42,0.25)",
     });
 
-    renderer.panel(28, panelY + 14, W - 56, 34, {
+    renderer.panel(28, panelY + 14, W - 56, layout.keypad.inputH, {
       fill: "#eff6ff",
       border: "#bfdbfe",
       borderWidth: 1.5,
       radius: 12,
       shadow: "",
     });
-    renderer.text(this.input || "\u8f93\u5165\u7b54\u6848", W / 2, panelY + 31, {
-      size: 22,
+    renderer.text(this.input || "\u8f93\u5165\u7b54\u6848", W / 2, panelY + 14 + layout.keypad.inputH / 2 + 1, {
+      size: layout.keypad.compact ? 20 : 22,
       weight: "700",
       align: "center",
       baseline: "middle",
@@ -748,11 +788,11 @@ class MeteorScene extends BaseScene {
       ["7", "8", "9"],
       ["clear", "0", "delete"],
     ];
-    const startY = panelY + 56;
-    const gap = 8;
-    const submitW = 98;
+    const startY = panelY + 14 + layout.keypad.inputH + (layout.keypad.compact ? 8 : 10);
+    const gap = layout.keypad.gridGap;
+    const submitW = layout.keypad.submitW;
     const btnW = (W - 52 - gap * 3 - submitW) / 3;
-    const btnH = 28;
+    const btnH = layout.keypad.btnH;
 
     rows.forEach((row, rowIndex) => {
       row.forEach((key, colIndex) => {
@@ -764,7 +804,7 @@ class MeteorScene extends BaseScene {
           color: "#111827",
           border: "#dbe4ea",
           radius: 10,
-          fontSize: 14,
+          fontSize: layout.keypad.compact ? 13 : 14,
           disabled: this.phase !== "playing",
         });
         this.registerButton(rect, () => this.onPadKey(key), this.phase !== "playing");
